@@ -1,0 +1,436 @@
+#Sentence Segmentation
+from nltk.tokenize import sent_tokenize, word_tokenize
+import nltk.tokenize
+import nltk
+import pandas as pd
+import sys
+import glob
+reload(sys)
+sys.setdefaultencoding('Cp1252')
+
+
+result = []
+PATH1 = '/Users/kevjung/Desktop/study/2016_Fall/IEMS_308/2013/*.txt'
+PATH2 = '/Users/kevjung/Desktop/study/2016_Fall/IEMS_308/2014/*.txt'
+
+rows=[]
+for file in (glob.glob(PATH1) + glob.glob(PATH2)): #(list+list)=sume of all the list
+	store=open(file)
+	for line in store:
+		rows.append(line)
+
+i=1
+
+for item in rows:
+	item = item.decode('Cp1252','ignore')
+	result.extend(sent_tokenize(item))
+	print i
+	
+
+
+file=open('setence_segment.txt','w')
+for item in result:
+	item = item.encode('utf-8')
+	file.write("%s\n" % item)
+  
+  #word Tokenization
+  from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem.porter import PorterStemmer
+import sys
+reload(sys)  
+sys.setdefaultencoding('Cp1252')
+path='/Users/kevjung/Desktop/study/2016_Fall/IEMS_308/setence_segment.txt'
+f=open(path)
+result=[]
+
+stop=set(stopwords.words('English'))
+
+
+for row in f:
+	for i in row.split():
+		if i not in stop:
+			i=word_tokenize
+			result.append(i)
+			
+
+
+file = open('word_token.txt','w')
+for item in result:	
+	file.write("%s"" " % item)	
+  
+  # POS Tagging
+  
+  import nltk
+
+
+
+# tagger = PerceptronTagger
+path = 'word_token.txt'
+f = open(path)
+
+cach = []
+for row in f:
+	cach = row.split(' ')
+
+result_ = []
+for idx in range(0,len(cach)-2):
+	result_.append(cach[idx])
+
+result = nltk.pos_tag(result_)
+file = open('output_of_pos.txt','w')
+
+for item in result:	
+	file.write("%s__%s"" " % item)
+  
+  #Stemming
+  
+  import re
+from nltk.stem.porter import PorterStemmer
+import sys
+reload(sys)  
+sys.setdefaultencoding('Cp1252')
+
+
+path = 'output_of_pos.txt'
+f = open(path,)
+result = []
+##idx = 0
+lists = []
+
+
+for row in f:
+	lists = row.split(' ')
+
+regex = r'[^"()\']*\w*[^.,\!:"()\']'
+count = 0
+for item in lists:
+	try:
+		item = re.findall(regex,item)[0]
+	except Exception,e:
+		print Exception,";",e,item
+		continue
+	print item
+for item in lists:
+	porter = PorterStemmer()
+	try:
+		item = item.decode('Cp1252','ignore')
+		result.append(porter.stem(item))
+	except Exception,e:
+		print Exception,";",e
+		continue
+file = open('stem_output.txt','w')
+for item in result:	
+	file.write("%s"" " % item)
+  
+  #Extraction & Training data set
+  
+  import re
+import numpy as np
+from sklearn import linear_model,datasets
+import pandas as pd  
+from sklearn import cross_validation,metrics
+from sklearn.linear_model import LogisticRegression
+from sklearn import svm
+
+def CounterExamples(data,num,dic):
+	wholename = []
+	currentname = []
+	Class = []
+	Tag = []
+	Length = []
+	FirstUpperLetter = []
+	FirstLowerLetter = []
+	SecondUpperLetter = []
+	SecondLowLetter = []
+	count = 0
+	
+	for item in data:
+		if count > num - 2:
+			break
+		try:
+			CurrentText = item.split('__')[0]
+			NextText = data[count+1].split('__')[0]
+			CurrentTag = item.split('__')[1]
+			NextTag = data[count+1].split('__')[1]
+			fu = CurrentText[0]
+			su = NextText[0]
+			fl = CurrentText[len(CurrentText)-1]
+			sl = NextText[len(NextText)-1]
+			leng = len(CurrentText) + len(NextText)
+			Length.append(leng)
+		except:
+			count = count + 1
+			continue
+
+		if fu <= 'Z' and fu >= 'A':
+			FirstUpperLetter.append(1)
+		else:
+			FirstUpperLetter.append(0)
+
+		if fl <= 'z' and fl >= 'a':
+			FirstLowerLetter.append(1)
+		else:
+			FirstLowerLetter.append(0)
+
+		if su <= 'Z' and su >= 'A':
+			SecondUpperLetter.append(1)
+		else:
+			SecondUpperLetter.append(0)
+
+		if sl <= 'z' and sl >= 'a':
+			SecondLowLetter.append(1)
+		else:
+			SecondLowLetter.append(0)
+
+		if CurrentTag == 'NNP' and NextTag == 'NNP':
+			Tag.append(1)
+		elif CurrentTag == 'NNP':
+			Tag.append(1)
+		else:
+			Tag.append(0)
+
+		WholeName = CurrentText + ' ' + NextText
+		wholename.append(WholeName)
+		currentname.append(CurrentText)
+		if dic.has_key(WholeName):
+			Class.append(1)
+		else:
+			Class.append(0)
+		count = count + 1
+	return Length,FirstUpperLetter,FirstLowerLetter,SecondUpperLetter,SecondLowLetter,Class,wholename,currentname
+	
+
+def NameDictionarY(CEO_Lists):
+	data = []
+	Lists = {}
+	for item in CEO_Lists:
+		item = item.strip()#remove something
+		item = item.replace(',',' ')
+		wholename = item.split(' ')
+		FirstName = wholename[0]
+		if len(wholename) > 1:
+			SecondName = wholename[1]
+			data.append(SecondName)
+			if len(wholename) > 2:
+				ThirdName = wholename[2]
+				data.append(ThirdName)
+		data.append(item)
+		data.append(FirstName)
+	for items in data:
+		items = items.strip()
+		if Lists.has_key(items):
+			continue
+		else:
+			Lists[items] = 1
+	return Lists
+
+def TrainingSet(CEO_file,CompanY_file,path_MY):
+	wholename = []
+	currentname = []
+	FirstUpperLetter = []
+	FirstLowerLetter = []
+	SecondUpperLetter = []
+	SecondLowLetter = []
+	Class = []
+	Tag = []
+	Length = []
+	CEO_Lists = []
+	CompanY_Lists = []
+	CEO_Data = open(CEO_file)
+	CompanY_Data = open(CompanY_file)
+
+	for row in CompanY_Data:
+		CEO_Lists = row.split('\r')
+	Comp_dic = NameDictionarY(CompanY_Lists)
+	MY_words = open(path_MY)
+
+	for row in CEO_Data:
+		CEO_Lists = row.split('\r')
+	dic = NameDictionarY(CEO_Lists)
+
+	for row in MY_words:
+		MY_Words_Lists = row.split(' ')
+
+	Final = []
+	for item in MY_Words_Lists:
+		try:
+			tag = item.split('__')[1]
+			if tag == 'NNP':
+				Final.append(item)
+		except:
+			continue
+	Length,FirstUpperLetter,FirstLowerLetter,SecondUpperLetter,SecondLowLetter,Class,wholename,currentname =  CounterExamples(Final,len(Final)/100,dic)
+	for item in CEO_Lists:
+		item = item.replace(',',' ')
+		leng = len(item)-1
+		fu,fl,su,sl = ExtractName(item)
+
+
+		FirstUpperLetter.append(fu)
+		FirstLowerLetter.append(fl)
+		SecondUpperLetter.append(su)
+		SecondLowLetter.append(sl)
+		Tag.append(tag)
+		Length.append(leng)
+		wholename.append(item)
+		currentname.append(item.split(' ')[0])
+		Class.append(1)
+
+	for item in CompanY_Lists:
+		item = item.replace(',',' ')
+		leng = len(item)-1
+		fu,fl,su,sl = ExtractName(item)
+# Append attributes to the list
+		FirstUpperLetter.append(fu)
+		SecondUpperLetter.append(su)
+		FirstLowerLetter.append(fl)
+		SecondLowLetter.append(sl)
+		Tag.append(tag)
+		wholename.append(item)
+		currentname.append(item.split(' ')[0])
+		Length.append(leng)
+		Class.append(1)
+
+	Train = pd.DataFrame.from_items([('Length',Length),('FirstUpperLetter',FirstUpperLetter),('FirstLowerLetter',FirstLowerLetter),('SecondUpperLetter',SecondUpperLetter),('SecondLowLetter',SecondLowLetter),('Class',Class)])
+	return Train,Final
+	
+
+def ExtractName(name):
+	NameCell = name.split(' ')
+	if len(NameCell) == 2:
+		SecondName = NameCell[1]
+	else:
+		SecondName = ''
+	FirstName = NameCell[0]
+
+	FirstTail = len(FirstName) - 1
+	if FirstTail > 0:
+		if FirstName[FirstTail] <= 'z' and FirstName[FirstTail] >= 'a':
+			FirstLowerLetter = 1
+		else:
+			FirstLowerLetter = 0
+
+		if FirstName[0] <= 'Z' and FirstName[0] >= 'A':
+			FirstUpperLetter = 1
+		else:
+			FirstUpperLetter = 0
+	else:
+		FirstLowerLetter = 0
+		FirstUpperLetter = 0
+
+	Second_tail = len(SecondName) - 1
+	if Second_tail > 0:
+		if SecondName[0] <= 'Z' and SecondName[0] >= 'A':
+			SecondUpperLetter = 1
+		else:
+			SecondUpperLetter = 0
+
+		if SecondName[Second_tail] <= 'z' and SecondName[Second_tail] >= 'a':
+			SecondLowLetter = 1
+		else:
+			SecondLowLetter = 0
+	else:
+		SecondLowLetter = 0
+		SecondUpperLetter = 0
+	return FirstUpperLetter,FirstLowerLetter,SecondUpperLetter,SecondLowLetter
+
+
+
+
+
+
+
+print 'Begin'
+Tag = []
+Length = []
+FirstUpperLetter = []
+FirstLowerLetter = []
+SecondUpperLetter = []
+SecondLowLetter = []
+Class = []
+wholename = []
+currentname = []
+
+CEO_file = '/Users/kevjung/Desktop/study/2016_Fall/IEMS_308/all/ceo.csv'
+CompanY_file = '/Users/kevjung/Desktop/study/2016_Fall/IEMS_308/all/companies.csv'
+
+CEO_Lists = []
+CompanY_Lists = []
+
+CompanY_Data = open(CompanY_file)
+CEO_Data = open(CEO_file)
+
+
+for row in CompanY_Data:
+	CompanY_Lists = row.split('\r')
+
+for row in CEO_Data:
+	CEO_Lists = row.split('\r')
+
+# Set up a dictionarY of CEO's name
+dic = NameDictionarY(CEO_Lists)
+# Set up a dictionarY of companY
+Comp_dic = NameDictionarY(CompanY_Lists)
+path_MY = 'stem_output.txt'
+MY_words = open(path_MY)
+
+for row in MY_words:
+	MY_Words_Lists = row.split(' ')
+
+Train,Final = TrainingSet(CEO_file,CompanY_file,path_MY)
+out = Train['Class']
+attr = Train[['Length','FirstUpperLetter','FirstLowerLetter','SecondUpperLetter','SecondLowLetter']]
+print 'Training Data Created'
+
+
+
+Tag = []
+Length = []
+FirstUpperLetter = []
+FirstLowerLetter = []
+SecondUpperLetter = []
+SecondLowLetter = []
+Class = []
+wholename = []
+currentname = []
+Length,FirstUpperLetter,FirstLowerLetter,SecondUpperLetter,SecondLowLetter,Class,wholename,currentname =  CounterExamples(Final,len(Final),dic)
+Test = pd.DataFrame.from_items([('Length',Length),('FirstUpperLetter',FirstUpperLetter),('FirstLowerLetter',FirstLowerLetter),('SecondUpperLetter',SecondUpperLetter),('SecondLowLetter',SecondLowLetter),('Class',Class),('wholename',wholename),('currentname',currentname)])
+X = Test[['Length','FirstUpperLetter','FirstLowerLetter','SecondUpperLetter','SecondLowLetter']]
+Y = Test['Class']
+
+Classification = svm.SVC(kernel = 'rbf')
+Classification.fit(attr,out)
+result = Classification.predict(X)
+print metrics.accuracy_score(Y,result)
+print metrics.classification_report(result,Y)
+count = 0
+NameLists = []
+
+
+for idx in range(0,len(result)):
+	if result[idx] == 1:
+		NameLists.append(Test.iloc[idx,7])
+
+print "-------------------------------------"
+print 'CEO names'		
+Final_CEO = []
+for item in NameLists:
+	if dic.has_key(item):
+		Final_CEO.append(item)
+print Final_CEO
+
+print "-------------------------------------"
+print 'Company Names'
+Final_Company = []
+for item in NameLists:
+	if Comp_dic.has_key(item):
+		Final_Company.append(item)
+print Final_Company
+
+
+
+
+
+
+
